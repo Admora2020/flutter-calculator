@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:expressions/expressions.dart';
+import 'dart:math'; // <-- Add this import
 
 void main() {
   runApp(const MyApp());
@@ -39,6 +40,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     '4', '5', '6', '*',
     '1', '2', '3', '-',
     'C', '0', '=', '+',
+    '%', 'x²', // <-- Added modulo and square buttons
   ];
 
   void _onButtonPressed(String value) {
@@ -49,9 +51,20 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
         _accumulator = '';
       } else if (value == '=') {
         try {
-          final exp = Expression.parse(_expression.replaceAll('×', '*').replaceAll('÷', '/'));
+          String parsedExpression = _expression
+              .replaceAll('×', '*')
+              .replaceAll('÷', '/')
+              .replaceAll('%', ' % ')
+              .replaceAllMapped(
+                RegExp(r'(\d+(\.\d+)?)x²'),
+                (match) => 'pow(${match[1]},2)',
+              );
+          // Support for pow (square)
+          final exp = Expression.parse(parsedExpression);
           final evaluator = const ExpressionEvaluator();
-          final evalResult = evaluator.eval(exp, {});
+          final evalResult = evaluator.eval(exp, {
+            'pow': pow, // <-- Use dart:math pow
+          });
           _result = evalResult.toString();
           _accumulator = '$_expression = $_result';
           _expression = '';
@@ -59,6 +72,11 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           _result = 'Error';
           _accumulator = '$_expression = Error';
           _expression = '';
+        }
+      } else if (value == 'x²') {
+        if (_expression.isNotEmpty && RegExp(r'\d$').hasMatch(_expression)) {
+          _expression += 'x²';
+          _accumulator = _expression;
         }
       } else {
         if (_result.isNotEmpty) {
